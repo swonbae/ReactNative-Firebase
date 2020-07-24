@@ -1,9 +1,10 @@
-import { StatusBar } from "expo-status-bar";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
+import * as Facebook from "expo-facebook";
+
 import * as firebase from "firebase";
-import { firebaseConfig } from "./config/config";
+import { firebaseConfig, facebookConfig } from "./config/config";
 
 firebase.initializeApp(firebaseConfig);
 
@@ -22,6 +23,14 @@ export default function App() {
   // console.log(firebaseConfig);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  useEffect(() => {
+    firebase.auth().onAuthStateChanged((user) => {
+      if (user !== null) {
+        console.log("- User:", user);
+      }
+    });
+  }, []);
 
   const signUpUser = (email, password) => {
     try {
@@ -46,6 +55,30 @@ export default function App() {
         });
     } catch (err) {
       console.log(err.toString());
+    }
+  };
+
+  const loginWithFacebook = async () => {
+    // const { type, token } = await Expo.Facebook.logInWithReadPermissionsAsync(
+    //   facebookConfig.appId,
+    //   {
+    //     permissions: ["public_profile"],
+    //   }
+    // );
+    await Facebook.initializeAsync(facebookConfig.appId);
+    const { type, token } = await Facebook.logInWithReadPermissionsAsync({
+      permissions: ["public_profile"],
+    });
+
+    if (type === "success") {
+      const credential = firebase.auth.FacebookAuthProvider.credential(token);
+
+      firebase
+        .auth()
+        .signInWithCredential(credential)
+        .catch((err) => {
+          console.log(err);
+        });
     }
   };
 
@@ -89,6 +122,16 @@ export default function App() {
           onPress={() => signUpUser(email, password)}
         >
           <Text style={styles.buttonText}>Sign Up</Text>
+        </Button>
+
+        <Button
+          style={{ marginTop: 10 }}
+          full
+          rounded
+          primary
+          onPress={() => loginWithFacebook()}
+        >
+          <Text style={styles.buttonText}>Login With Facebook</Text>
         </Button>
       </Form>
     </Container>
